@@ -18,7 +18,7 @@ like this:
       <groupId>org.microbean</groupId>
       <artifactId>microbean-narayana-jta-cdi</artifactId>
       <!-- See http://search.maven.org/#search%7Cga%7C1%7Cg%3A%22org.microbean%22%20AND%20a%3A%22microbean-narayana-jta-cdi%22 for available releases. -->
-      <version>0.0.1</version>
+      <version>0.0.2</version>
       <type>jar</type>
       <scope>runtime</scope>
     </dependency>
