@@ -18,23 +18,30 @@ package org.microbean.narayana.jta.cdi;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
-import java.lang.reflect.Type;
 
-import javax.enterprise.context.Dependent;
+import javax.enterprise.context.ApplicationScoped;
 
 import javax.enterprise.event.Observes;
 
+import javax.enterprise.inject.CreationException;
+
 import javax.enterprise.inject.spi.AfterBeanDiscovery;
-import javax.enterprise.inject.spi.BeforeBeanDiscovery;
+import javax.enterprise.inject.spi.AfterDeploymentValidation;
+import javax.enterprise.inject.spi.Bean;
+import javax.enterprise.inject.spi.BeanManager;
+import javax.enterprise.inject.spi.CDI;
 import javax.enterprise.inject.spi.Extension;
 import javax.enterprise.inject.spi.ProcessAnnotatedType;
 
+import javax.transaction.SystemException;
+import javax.transaction.Transaction;
 import javax.transaction.TransactionManager;
+import javax.transaction.TransactionScoped;
 import javax.transaction.TransactionSynchronizationRegistry;
 
-import com.arjuna.ats.internal.jta.transaction.arjunacore.TransactionSynchronizationRegistryImple;
-
 import com.arjuna.ats.jta.cdi.TransactionContext;
+
+import com.arjuna.ats.jta.common.jtaPropertyManager;
 
 /**
  * A <a
@@ -49,7 +56,7 @@ import com.arjuna.ats.jta.cdi.TransactionContext;
  */
 public final class NarayanaExtension implements Extension {
 
-  
+
   /*
    * Constructors.
    */
@@ -67,40 +74,31 @@ public final class NarayanaExtension implements Extension {
    * Instance methods.
    */
 
-  
-  private final void beforeBeanDiscovery(@Observes final BeforeBeanDiscovery event) throws ReflectiveOperationException {
 
-    // Hack the TransactionContext class to not require JNDI.
-    
-    Field field = TransactionContext.class.getDeclaredField("transactionManager");
-    assert field != null;
-    assert Modifier.isStatic(field.getModifiers());
-    assert Modifier.isPrivate(field.getModifiers());
-    assert TransactionManager.class.equals(field.getType());
-    field.setAccessible(true);
-    field.set(null, com.arjuna.ats.jta.TransactionManager.transactionManager());
-
-    field = TransactionContext.class.getDeclaredField("transactionSynchronizationRegistry");
-    assert field != null;
-    assert Modifier.isStatic(field.getModifiers());
-    assert Modifier.isPrivate(field.getModifiers());
-    assert TransactionSynchronizationRegistry.class.equals(field.getType());
-    field.setAccessible(true);
-    field.set(null, new TransactionSynchronizationRegistryImple());
-  }
-  
   private final void afterBeanDiscovery(@Observes final AfterBeanDiscovery event) {
-    // A note on the scope for this bean:
-    // com.arjuna.ats.jta.TransactionManager#transactionManager()
-    // returns a singleton.  But I suppose there is no guarantee in
-    // the future that it will do so, and in any event the rest of the
-    // Narayana infrastructure doesn't always cache the return value
-    // of this method, so we want to preserve those semantics.
     if (event != null) {
+
       event.addBean()
         .types(TransactionManager.class)
-        .scope(Dependent.class)
+        .scope(ApplicationScoped.class)
         .createWith(cc -> com.arjuna.ats.jta.TransactionManager.transactionManager());
+
+      event.addBean()
+        .types(Transaction.class)
+        .scope(TransactionScoped.class)
+        .createWith(cc -> {
+            try {
+              return CDI.current().select(TransactionManager.class).get().getTransaction();
+            } catch (final SystemException systemException) {
+              throw new CreationException(systemException.getMessage(), systemException);
+            }
+          });
+
+      event.addBean()
+        .types(TransactionSynchronizationRegistry.class)
+        .scope(ApplicationScoped.class)
+        .createWith(cc -> jtaPropertyManager.getJTAEnvironmentBean().getTransactionSynchronizationRegistry());
+
     }
   }
 
@@ -112,10 +110,53 @@ public final class NarayanaExtension implements Extension {
       // lookup which will fail, since we are not guaranteed the
       // presence of a JNDI implementation in the microBean
       // environment.  We replace them with similar almost-clones
-      // present in this package that bypass the JNDI machinery.
+      // present in this package that bypass JNDI machinery.
       // See also: https://github.com/jbosstm/narayana/pull/1344
       event.veto();
     }
   }
-  
+
+  private final void afterDeploymentValidation(@Observes final AfterDeploymentValidation event, final BeanManager beanManager) throws ReflectiveOperationException {
+
+    if (event != null && beanManager != null) {
+
+      final Bean<?> transactionManagerBean =
+        beanManager.resolve(beanManager.getBeans(TransactionManager.class));
+      assert transactionManagerBean != null;
+      final TransactionManager transactionManager =
+        (TransactionManager)beanManager.getReference(transactionManagerBean,
+                                                     TransactionManager.class,
+                                                     beanManager.createCreationalContext(transactionManagerBean));
+      assert transactionManager != null;
+
+      final Bean<?> transactionSynchronizationRegistryBean = beanManager.resolve(beanManager.getBeans(TransactionSynchronizationRegistry.class));
+      assert transactionSynchronizationRegistryBean != null;
+      final TransactionSynchronizationRegistry transactionSynchronizationRegistry =
+        (TransactionSynchronizationRegistry)beanManager.getReference(transactionSynchronizationRegistryBean,
+                                                                     TransactionSynchronizationRegistry.class,
+                                                                     beanManager.createCreationalContext(transactionSynchronizationRegistryBean));
+      assert transactionSynchronizationRegistry != null;
+
+      // Hack the TransactionContext class to not require JNDI.
+
+      Field field = TransactionContext.class.getDeclaredField("transactionManager");
+      assert field != null;
+      assert Modifier.isStatic(field.getModifiers());
+      assert Modifier.isPrivate(field.getModifiers());
+      assert TransactionManager.class.equals(field.getType());
+      field.setAccessible(true);
+      field.set(null, transactionManager);
+
+      field = TransactionContext.class.getDeclaredField("transactionSynchronizationRegistry");
+      assert field != null;
+      assert Modifier.isStatic(field.getModifiers());
+      assert Modifier.isPrivate(field.getModifiers());
+      assert TransactionSynchronizationRegistry.class.equals(field.getType());
+      field.setAccessible(true);
+      field.set(null, transactionSynchronizationRegistry);
+
+    }
+
+  }
+
 }
