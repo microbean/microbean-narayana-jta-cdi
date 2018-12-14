@@ -4,7 +4,7 @@
 
   <groupId>org.microbean</groupId>
   <artifactId>microbean-narayana-jta-cdi</artifactId>
-  <version>0.0.5-SNAPSHOT</version>
+  <version>0.1.0-SNAPSHOT</version>
 
   <parent>
     <groupId>org.microbean</groupId>
@@ -71,11 +71,11 @@
         <version>1.2</version>
         <type>jar</type>
       </dependency>
-  
+
       <dependency>
         <groupId>org.jboss.narayana.jta</groupId>
         <artifactId>narayana-jta</artifactId>
-        <version>5.9.0.Final</version>
+        <version>5.9.1.Final</version>
         <type>jar</type>
         <exclusions>
           <exclusion>
@@ -149,6 +149,11 @@
       <plugins>
 
         <plugin>
+          <artifactId>maven-jar-plugin</artifactId>
+          <version>3.1.1</version>
+        </plugin>
+        
+        <plugin>
           <artifactId>maven-javadoc-plugin</artifactId>
           <configuration>
             <additionalJOptions combine.children="append">
@@ -157,17 +162,27 @@
           </configuration>
         </plugin>
         
-        <plugin>
-          <groupId>org.owasp</groupId>
-          <artifactId>dependency-check-maven</artifactId>
-          <version>4.0.0</version>                    
-        </plugin>
-        
       </plugins>
     </pluginManagement>
     
     <plugins>
 
+      <plugin>
+        <artifactId>maven-jar-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>default-jar</id>
+            <configuration>
+              <archive>
+                <manifestEntries>
+                  <Automatic-Module-Name>org.microbean.narayana.cdi</Automatic-Module-Name>
+                </manifestEntries>
+              </archive>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      
       <plugin>
         <artifactId>maven-surefire-plugin</artifactId>
         <configuration>
@@ -187,11 +202,8 @@
 
   <properties>
     
-    <!-- dependency-check-plugin properties; see -->
-    <suppressionFile>${basedir}/src/dependency-check/suppressions.xml</suppressionFile>
-    
     <!-- maven-javadoc-plugin properties; see https://maven.apache.org/plugins/maven-javadoc-plugin/javadoc-mojo.html -->
-    <links>https://static.javadoc.io/javax.transaction/javax.transaction-api/1.2/,http://docs.jboss.org/cdi/api/2.0/</links>
+    <links>https://static.javadoc.io/javax.transaction/javax.transaction-api/1.2/,http://docs.jboss.org/cdi/api/2.0/,https://static.javadoc.io/org.jboss.narayana.jta/narayana-jta/5.9.0.Final/</links>
     <stylesheetfile>css/stylesheet.css</stylesheetfile>
 
   </properties>
@@ -200,10 +212,6 @@
     <plugins>
       <plugin>
         <artifactId>maven-javadoc-plugin</artifactId>
-      </plugin>
-      <plugin>
-        <groupId>org.owasp</groupId>
-        <artifactId>dependency-check-maven</artifactId>
       </plugin>
     </plugins>
   </reporting>

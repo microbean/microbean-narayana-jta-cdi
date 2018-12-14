@@ -16,30 +16,22 @@
  */
 package org.microbean.narayana.jta.cdi;
 
-import java.lang.reflect.Field;
-import java.lang.reflect.Modifier;
-
 import javax.enterprise.context.ApplicationScoped;
 
 import javax.enterprise.event.Observes;
 
 import javax.enterprise.inject.CreationException;
+import javax.enterprise.inject.Produces;
 
 import javax.enterprise.inject.spi.AfterBeanDiscovery;
-import javax.enterprise.inject.spi.AfterDeploymentValidation;
-import javax.enterprise.inject.spi.Bean;
-import javax.enterprise.inject.spi.BeanManager;
 import javax.enterprise.inject.spi.CDI;
 import javax.enterprise.inject.spi.Extension;
-import javax.enterprise.inject.spi.ProcessAnnotatedType;
 
 import javax.transaction.SystemException;
 import javax.transaction.Transaction;
 import javax.transaction.TransactionManager;
 import javax.transaction.TransactionScoped;
 import javax.transaction.TransactionSynchronizationRegistry;
-
-import com.arjuna.ats.jta.cdi.TransactionContext;
 
 import com.arjuna.ats.jta.common.jtaPropertyManager;
 
@@ -75,13 +67,16 @@ public final class NarayanaExtension implements Extension {
    */
 
 
+  /**
+   * Adds a synthetic bean that creates a {@link Transaction} in
+   * {@linkplain TransactionScoped transaction scope}.
+   *
+   * @param event the {@link AfterBeanDiscovery} event fired by the
+   * CDI container; may be {@code null} in which case no action will
+   * be taken
+   */
   private final void afterBeanDiscovery(@Observes final AfterBeanDiscovery event) {
     if (event != null) {
-
-      event.addBean()
-        .types(TransactionManager.class)
-        .scope(ApplicationScoped.class)
-        .createWith(cc -> com.arjuna.ats.jta.TransactionManager.transactionManager());
 
       event.addBean()
         .types(Transaction.class)
@@ -94,69 +89,7 @@ public final class NarayanaExtension implements Extension {
             }
           });
 
-      event.addBean()
-        .types(TransactionSynchronizationRegistry.class)
-        .scope(ApplicationScoped.class)
-        .createWith(cc -> jtaPropertyManager.getJTAEnvironmentBean().getTransactionSynchronizationRegistry());
-
     }
-  }
-
-  private final void onTypeDiscovery(@Observes final ProcessAnnotatedType<? extends com.arjuna.ats.jta.cdi.transactional.TransactionalInterceptorBase> event) {
-    if (event != null &&
-        event.getAnnotatedType().getBaseType().getTypeName().startsWith("com.arjuna.ats.jta.cdi.transactional.TransactionalInterceptor")) {
-      // Programmatically remove the interceptors installed by the
-      // stock Narayana extension.  These will trigger a JNDI
-      // lookup which will fail, since we are not guaranteed the
-      // presence of a JNDI implementation in the microBean
-      // environment.  We replace them with similar almost-clones
-      // present in this package that bypass JNDI machinery.
-      // See also: https://github.com/jbosstm/narayana/pull/1344
-      event.veto();
-    }
-  }
-
-  private final void afterDeploymentValidation(@Observes final AfterDeploymentValidation event, final BeanManager beanManager) throws ReflectiveOperationException {
-
-    if (event != null && beanManager != null) {
-
-      final Bean<?> transactionManagerBean =
-        beanManager.resolve(beanManager.getBeans(TransactionManager.class));
-      assert transactionManagerBean != null;
-      final TransactionManager transactionManager =
-        (TransactionManager)beanManager.getReference(transactionManagerBean,
-                                                     TransactionManager.class,
-                                                     beanManager.createCreationalContext(transactionManagerBean));
-      assert transactionManager != null;
-
-      final Bean<?> transactionSynchronizationRegistryBean = beanManager.resolve(beanManager.getBeans(TransactionSynchronizationRegistry.class));
-      assert transactionSynchronizationRegistryBean != null;
-      final TransactionSynchronizationRegistry transactionSynchronizationRegistry =
-        (TransactionSynchronizationRegistry)beanManager.getReference(transactionSynchronizationRegistryBean,
-                                                                     TransactionSynchronizationRegistry.class,
-                                                                     beanManager.createCreationalContext(transactionSynchronizationRegistryBean));
-      assert transactionSynchronizationRegistry != null;
-
-      // Hack the TransactionContext class to not require JNDI.
-
-      Field field = TransactionContext.class.getDeclaredField("transactionManager");
-      assert field != null;
-      assert Modifier.isStatic(field.getModifiers());
-      assert Modifier.isPrivate(field.getModifiers());
-      assert TransactionManager.class.equals(field.getType());
-      field.setAccessible(true);
-      field.set(null, transactionManager);
-
-      field = TransactionContext.class.getDeclaredField("transactionSynchronizationRegistry");
-      assert field != null;
-      assert Modifier.isStatic(field.getModifiers());
-      assert Modifier.isPrivate(field.getModifiers());
-      assert TransactionSynchronizationRegistry.class.equals(field.getType());
-      field.setAccessible(true);
-      field.set(null, transactionSynchronizationRegistry);
-
-    }
-
   }
 
 }
