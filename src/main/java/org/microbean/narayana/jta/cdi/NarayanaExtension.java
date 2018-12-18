@@ -16,14 +16,21 @@
  */
 package org.microbean.narayana.jta.cdi;
 
+import java.util.Collection;
+
 import javax.enterprise.context.ApplicationScoped;
+import javax.enterprise.context.Dependent;
 
 import javax.enterprise.event.Observes;
 
+import javax.enterprise.inject.Any;
 import javax.enterprise.inject.CreationException;
+import javax.enterprise.inject.Default;
 import javax.enterprise.inject.Produces;
 
 import javax.enterprise.inject.spi.AfterBeanDiscovery;
+import javax.enterprise.inject.spi.Bean;
+import javax.enterprise.inject.spi.BeanManager;
 import javax.enterprise.inject.spi.CDI;
 import javax.enterprise.inject.spi.Extension;
 
@@ -32,6 +39,7 @@ import javax.transaction.Transaction;
 import javax.transaction.TransactionManager;
 import javax.transaction.TransactionScoped;
 import javax.transaction.TransactionSynchronizationRegistry;
+import javax.transaction.UserTransaction;
 
 import com.arjuna.ats.jta.common.jtaPropertyManager;
 
@@ -75,10 +83,23 @@ public final class NarayanaExtension implements Extension {
    * CDI container; may be {@code null} in which case no action will
    * be taken
    */
-  private final void afterBeanDiscovery(@Observes final AfterBeanDiscovery event) {
+  private final void afterBeanDiscovery(@Observes final AfterBeanDiscovery event, final BeanManager beanManager) {
     if (event != null) {
 
+      // Weld registers a UserTransaction bean well before this
+      // observer method fires.  OpenWebBeans does not.
+      final Collection<? extends Bean<?>> userTransactionBeans = beanManager.getBeans(UserTransaction.class);
+      if (userTransactionBeans == null || userTransactionBeans.isEmpty()) {
+        event.addBean()
+          .addQualifiers(Any.Literal.INSTANCE, Default.Literal.INSTANCE) // OpenWebBeans does not add these
+          .types(UserTransaction.class)
+          .scope(Dependent.class) // see e.g. https://docs.oracle.com/javaee/6/tutorial/doc/gmgli.html; not specified in CDI specification
+          .createWith(cc -> com.arjuna.ats.jta.UserTransaction.userTransaction());
+      }
+
       event.addBean()
+        .id(Transaction.class.getName()) // TODO: is this OK?
+        .addQualifiers(Any.Literal.INSTANCE, Default.Literal.INSTANCE) // OpenWebBeans does not add these
         .types(Transaction.class)
         .scope(TransactionScoped.class)
         .createWith(cc -> {
