@@ -91,9 +91,16 @@ public final class NarayanaExtension implements Extension {
       final Collection<? extends Bean<?>> userTransactionBeans = beanManager.getBeans(UserTransaction.class);
       if (userTransactionBeans == null || userTransactionBeans.isEmpty()) {
         event.addBean()
-          .addQualifiers(Any.Literal.INSTANCE, Default.Literal.INSTANCE) // OpenWebBeans does not add these
           .types(UserTransaction.class)
-          .scope(Dependent.class) // see e.g. https://docs.oracle.com/javaee/6/tutorial/doc/gmgli.html; not specified in CDI specification
+          // see
+          // e.g. https://docs.oracle.com/javaee/6/tutorial/doc/gmgli.html
+          // which reads in part: "Predefined beans are injected with
+          // dependent scope and the predefined default
+          // qualifier @Default."  This scope restriction is not
+          // specified in the CDI specification but seems reasonable
+          // and widely expected.
+          .addQualifiers(Any.Literal.INSTANCE, Default.Literal.INSTANCE) // OpenWebBeans does not add these; Weld does automatically
+          .scope(Dependent.class)
           .createWith(cc -> com.arjuna.ats.jta.UserTransaction.userTransaction());
       }
 
