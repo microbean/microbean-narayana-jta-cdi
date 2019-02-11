@@ -39,8 +39,8 @@ import com.arjuna.ats.jta.common.JTAEnvironmentBean;
  * A {@link DelegatingTransactionManager} in {@linkplain
  * ApplicationScoped application scope} that uses the return value
  * that results from invoking the {@link
- * com.arjuna.ats.jta.TransactionManager#transactionManager()} method
- * as its backing implementation.
+ * JTAEnvironmentBean#getTransactionManager()} method as its backing
+ * implementation.
  *
  * @author <a href="https://about.me/lairdnelson"
  * target="_parent">Laird Nelson</a>
@@ -57,11 +57,26 @@ public class NarayanaTransactionManager extends DelegatingTransactionManager {
   /**
    * Creates a new {@link NarayanaTransactionManager}.
    *
-   * @param broadcaster an {@link Event} capable of {@linkplain
-   * Event#fire(Object) firing} {@link Transaction} instances; may be
+   * @param jtaEnvironmentBean a {@link JTAEnvironmentBean} used to
+   * acquire this {@link NarayanaTransactionManager}'s delegate; must
+   * not be {@code null}
+   *
+   * @param transactionScopeInitializedBroadcaster an {@link Event}
+   * capable of {@linkplain Event#fire(Object) firing} {@link
+   * Transaction} instances; may be {@code null}
+   *
+   * @param transactionScopeDestroyedBroadcaster an {@link Event}
+   * capable of {@linkplain Event#fire(Object) firing} {@link Object}
+   * instances; may be {@code null}
+   *
+   * @exception NullPointerException if {@code jtaEnvironmentBean} is
    * {@code null}
    *
    * @see #begin()
+   *
+   * @see #commit()
+   *
+   * @see #rollback()
    */
   @Inject
   public NarayanaTransactionManager(final JTAEnvironmentBean jtaEnvironmentBean,
