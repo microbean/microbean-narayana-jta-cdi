@@ -34,6 +34,8 @@ import javax.enterprise.inject.spi.BeanManager;
 import javax.enterprise.inject.spi.CDI;
 import javax.enterprise.inject.spi.Extension;
 
+import javax.inject.Singleton;
+
 import javax.transaction.SystemException;
 import javax.transaction.Transaction;
 import javax.transaction.TransactionManager;
@@ -41,7 +43,9 @@ import javax.transaction.TransactionScoped;
 import javax.transaction.TransactionSynchronizationRegistry;
 import javax.transaction.UserTransaction;
 
-import com.arjuna.ats.jta.common.jtaPropertyManager;
+import com.arjuna.ats.jta.common.JTAEnvironmentBean;
+
+import com.arjuna.common.internal.util.propertyservice.BeanPopulator;
 
 /**
  * A <a
@@ -116,6 +120,11 @@ public final class NarayanaExtension implements Extension {
               throw new CreationException(systemException.getMessage(), systemException);
             }
           });
+
+      event.addBean()
+        .addTransitiveTypeClosure(JTAEnvironmentBean.class)
+        .scope(Singleton.class)
+        .createWith(cc -> BeanPopulator.getDefaultInstance(JTAEnvironmentBean.class));
 
     }
   }

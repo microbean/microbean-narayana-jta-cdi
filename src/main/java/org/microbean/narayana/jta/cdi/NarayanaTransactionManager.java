@@ -17,15 +17,23 @@
 package org.microbean.narayana.jta.cdi;
 
 import javax.enterprise.context.ApplicationScoped;
+import javax.enterprise.context.Destroyed;
+import javax.enterprise.context.Initialized;
 
 import javax.enterprise.event.Event;
 
 import javax.inject.Inject;
 
+import javax.transaction.HeuristicMixedException;
+import javax.transaction.HeuristicRollbackException;
 import javax.transaction.NotSupportedException;
+import javax.transaction.RollbackException;
 import javax.transaction.SystemException;
 import javax.transaction.Transaction;
 import javax.transaction.TransactionManager; // for javadoc only
+import javax.transaction.TransactionScoped;
+
+import com.arjuna.ats.jta.common.JTAEnvironmentBean;
 
 /**
  * A {@link DelegatingTransactionManager} in {@linkplain
@@ -37,13 +45,15 @@ import javax.transaction.TransactionManager; // for javadoc only
  * @author <a href="https://about.me/lairdnelson"
  * target="_parent">Laird Nelson</a>
  *
- * @see com.arjuna.ats.jta.TransactionManager#transactionManager()
+ * @see com.arjuna.ats.jta.common.JTAEnvironmentBean#getTransactionManager()
  */
 @ApplicationScoped
 public class NarayanaTransactionManager extends DelegatingTransactionManager {
 
-  private final Event<Transaction> broadcaster;
+  private final Event<Transaction> transactionScopeInitializedBroadcaster;
 
+  private final Event<Object> transactionScopeDestroyedBroadcaster;
+  
   /**
    * Creates a new {@link NarayanaTransactionManager}.
    *
@@ -54,16 +64,21 @@ public class NarayanaTransactionManager extends DelegatingTransactionManager {
    * @see #begin()
    */
   @Inject
-  public NarayanaTransactionManager(final Event<Transaction> broadcaster) {
-    super(com.arjuna.ats.jta.TransactionManager.transactionManager());
-    this.broadcaster = broadcaster;
+  public NarayanaTransactionManager(final JTAEnvironmentBean jtaEnvironmentBean,
+                                    @Initialized(TransactionScoped.class)
+                                    final Event<Transaction> transactionScopeInitializedBroadcaster,
+                                    @Destroyed(TransactionScoped.class)
+                                    final Event<Object> transactionScopeDestroyedBroadcaster) {
+    super(jtaEnvironmentBean.getTransactionManager());
+    this.transactionScopeInitializedBroadcaster = transactionScopeInitializedBroadcaster;
+    this.transactionScopeDestroyedBroadcaster = transactionScopeDestroyedBroadcaster;
   }
 
   /**
-   * Overrides the {@link DelegatingTransactionManager#begin()} method
-   * to additionally {@linkplain Event#fire(Object) fire} the return
-   * value of the {@link #getTransaction()} method immediately after a
-   * transaction is begun.
+   * Overrides {@link DelegatingTransactionManager#begin()} to
+   * additionally {@linkplain Event#fire(Object) fire} an {@link
+   * Object} representing the {@linkplain Initialized initialization}
+   * of the {@linkplain TransactionScoped transaction scope}.
    *
    * @exception NotSupportedException if the thread is already
    * associated with a transaction and this {@link TransactionManager}
@@ -74,15 +89,95 @@ public class NarayanaTransactionManager extends DelegatingTransactionManager {
    *
    * @see DelegatingTransactionManager#begin()
    *
-   * @see Transaction
+   * @see Event#fire(Object)
+   *
+   * @see Initialized
+   *
+   * @see TransactionScoped
    */
   @Override
   public void begin() throws NotSupportedException, SystemException {
     super.begin();
-    if (this.broadcaster != null) {
-      final Transaction transaction = this.getTransaction();
-      assert transaction != null;
-      this.broadcaster.fire(transaction);
+    if (this.transactionScopeInitializedBroadcaster != null) {
+      this.transactionScopeInitializedBroadcaster.fire(this.getTransaction());
+    }
+  }
+
+  /**
+   * Overrides {@link DelegatingTransactionManager#commit()} to
+   * additionally {@linkplain Event#fire(Object) fire} an {@link
+   * Object} representing the {@linkplain Destroyed destruction}
+   * of the {@linkplain TransactionScoped transaction scope}.
+   *
+   * @exception RollbackException if the transaction has been rolled
+   * back rather than committed
+   *
+   * @exception HeuristicMixedException if a heuristic decision was
+   * made and that some relevant updates have been committed while
+   * others have been rolled back
+   *
+   * @exception HeuristicRollbackException if a heuristic decision was
+   * made and all relevant updates have been rolled back
+   *
+   * @exception SecurityException if the thread is not allowed to
+   * commit the transaction
+   *
+   * @exception IllegalStateException if the current thread is not
+   * associated with a transaction
+   *
+   * @exception SystemException if this {@link TransactionManager}
+   * encounters an unexpected error condition
+   *
+   * @see DelegatingTransactionManager#commit()
+   *
+   * @see Event#fire(Object)
+   *
+   * @see Destroyed
+   *
+   * @see TransactionScoped
+   */
+  @Override
+  public void commit() throws HeuristicMixedException, HeuristicRollbackException, RollbackException, SystemException {
+    try {
+      super.commit();
+    } finally {
+      if (this.transactionScopeDestroyedBroadcaster != null) {
+        this.transactionScopeDestroyedBroadcaster.fire(this.toString());
+      }
+    }
+  }
+
+  /**
+   * Overrides {@link DelegatingTransactionManager#rollback()} to
+   * additionally {@linkplain Event#fire(Object) fire} an {@link
+   * Object} representing the {@linkplain Destroyed destruction}
+   * of the {@linkplain TransactionScoped transaction scope}.
+   *
+   * @exception SecurityException if the thread is not allowed to roll
+   * back the transaction
+   *
+   * @exception IllegalStateException if the current thread is not
+   * associated with a transaction
+   *
+   * @exception SystemException if this {@link TransactionManager}
+   * encounters an unexpected error condition
+   *
+   * @see DelegatingTransactionManager#rollback()
+   *
+   * @see Event#fire(Object)
+   *
+   * @see Destroyed
+   *
+   * @see TransactionScoped
+   */
+  @Override
+  public void rollback() throws SystemException {
+    try {
+      super.rollback();
+    } finally {
+      if (this.transactionScopeDestroyedBroadcaster != null) {
+        this.transactionScopeDestroyedBroadcaster.fire(this.toString());
+      }
     }
   }
 
