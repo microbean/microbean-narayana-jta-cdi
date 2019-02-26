@@ -53,6 +53,25 @@ public class NarayanaTransactionManager extends DelegatingTransactionManager {
   private final Event<Transaction> transactionScopeInitializedBroadcaster;
 
   private final Event<Object> transactionScopeDestroyedBroadcaster;
+
+  /**
+   * Creates a new, <strong>nonfunctional</strong> {@link
+   * NarayanaTransactionManager}.
+   *
+   * <p>This constructor exists only to conform with section 3.11 of
+   * the CDI specification.</p>
+   *
+   * @deprecated This constructor exists only to conform with section
+   * 3.11 of the CDI specification; please use the {@link
+   * #NarayanaTransactionManager(JTAEnvironmentBean, Event, Event)}
+   * constructor instead.
+   */
+  @Deprecated
+  protected NarayanaTransactionManager() {
+    super(null);
+    this.transactionScopeInitializedBroadcaster = null;
+    this.transactionScopeDestroyedBroadcaster = null;
+  }
   
   /**
    * Creates a new {@link NarayanaTransactionManager}.

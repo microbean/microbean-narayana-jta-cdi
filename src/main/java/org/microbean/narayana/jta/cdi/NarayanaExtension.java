@@ -123,6 +123,7 @@ public final class NarayanaExtension implements Extension {
 
       event.addBean()
         .addTransitiveTypeClosure(JTAEnvironmentBean.class)
+        .addQualifiers(Any.Literal.INSTANCE, Default.Literal.INSTANCE) // OpenWebBeans does not add these; Weld does automatically
         .scope(Singleton.class)
         .createWith(cc -> BeanPopulator.getDefaultInstance(JTAEnvironmentBean.class));
 
