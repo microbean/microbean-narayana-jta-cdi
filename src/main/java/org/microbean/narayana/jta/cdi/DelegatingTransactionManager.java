@@ -33,6 +33,11 @@ import javax.transaction.TransactionManager;
  * delegates all method invocations to another {@link
  * TransactionManager}.
  *
+ * <h2>Design Notes</h2>
+ *
+ * <p>This class is {@code public} for convenience.  It is extended by
+ * other non-{@code public} internal classes.</p>
+ *
  * @author <a href="https://about.me/lairdnelson" target="_parent">Laird Nelson</a>
  *
  * @see TransactionManager
@@ -42,34 +47,16 @@ public abstract class DelegatingTransactionManager implements TransactionManager
   private final TransactionManager delegate;
 
   /**
-   * Creates a new, <strong>nonfunctional</strong> {@link
-   * DelegatingTransactionManager}.
-   *
-   * <p>This constructor exists only to conform with section 3.11 of
-   * the CDI specification.</p>
-   *
-   * @deprecated This constructor exists only to conform with section
-   * 3.11 of the CDI specification; please use the {@link
-   * #DelegatingTransactionManager(TransactionManager)} constructor
-   * instead.
-   */
-  @Deprecated
-  protected DelegatingTransactionManager() {
-    super();
-    this.delegate = null;
-  }
-  
-  /**
    * Creates a new {@link DelegatingTransactionManager}.
    *
    * @param delegate the {@link TransactionManager} to which all
-   * method invocations will be delegated; must not be {@code null}
-   *
-   * @exception NullPointerException if {@code delegate} is {@code null}
+   * method invocations will be delegated; may be {@code null}, but
+   * then a {@link SystemException} will be thrown by every method in
+   * this class when invoked
    */
   protected DelegatingTransactionManager(final TransactionManager delegate) {
     super();
-    this.delegate = Objects.requireNonNull(delegate);
+    this.delegate = delegate;
   }
 
   /**

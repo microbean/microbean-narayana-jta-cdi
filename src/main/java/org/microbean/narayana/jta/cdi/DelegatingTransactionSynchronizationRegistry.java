@@ -30,8 +30,15 @@ import javax.transaction.TransactionSynchronizationRegistry;
  * implementation that delegates all method invocations to another
  * {@link TransactionSynchronizationRegistry}.
  *
+ * <h2>Design Notes</h2>
+ *
+ * <p>This class is {@code public} for convenience.  It is extended by
+ * other non-{@code public} internal classes.</p>
+ *
  * @author <a href="https://about.me/lairdnelson"
  * target="_parent">Laird Nelson</a>
+ *
+ * @see TransactionSynchronizationRegistry
  */
 public abstract class DelegatingTransactionSynchronizationRegistry implements TransactionSynchronizationRegistry {
 
@@ -41,15 +48,14 @@ public abstract class DelegatingTransactionSynchronizationRegistry implements Tr
    * Creates a new {@link DelegatingTransactionSynchronizationRegistry}.
    *
    * @param delegate the {@link TransactionSynchronizationRegistry} to
-   * which all method invocations will be delegated; must not be
-   * {@code null}
+   * which all method invocations will be delegated; may be {@code
+   * null} in which case every method in this class will throw an
+   * {@link IllegalStateException} when invoked
    *
-   * @exception NullPointerException if {@code delegate} is {@code
-   * null}
    */
   protected DelegatingTransactionSynchronizationRegistry(final TransactionSynchronizationRegistry delegate) {
     super();
-    this.delegate = Objects.requireNonNull(delegate);
+    this.delegate = delegate;
   }
 
   /**
@@ -81,9 +87,17 @@ public abstract class DelegatingTransactionSynchronizationRegistry implements Tr
    * @return an opaque object representing the transaction bound to
    * the current thread at the time this method is called, or {@code
    * null}
+   *
+   * @exception IllegalStateException if a {@code null} {@code
+   * delegate} was supplied at {@linkplain
+   * #DelegatingTransactionSynchronizationRegistry(TransactionSynchronizationRegistry)
+   * construction time}
    */
   @Override
   public Object getTransactionKey() {
+    if (this.delegate == null) {
+      throw new IllegalStateException("delegate == null");
+    }
     return this.delegate.getTransactionKey();
   }
 
@@ -107,13 +121,19 @@ public abstract class DelegatingTransactionSynchronizationRegistry implements Tr
    *
    * @param value the value for the {@link Map} entry
    *
-   * @exception IllegalStateException if no transaction is active
+   * @exception IllegalStateException if no transaction is active or
+   * if a {@code null} {@code delegate} was supplied at {@linkplain
+   * #DelegatingTransactionSynchronizationRegistry(TransactionSynchronizationRegistry)
+   * construction time}
    *
    * @exception NullPointerException if the parameter {@code key} is
    * {@code null}
   */
   @Override
   public void putResource(final Object key, final Object value) {
+    if (this.delegate == null) {
+      throw new IllegalStateException("delegate == null");
+    }
     this.delegate.putResource(key, value);
   }
 
@@ -137,13 +157,19 @@ public abstract class DelegatingTransactionSynchronizationRegistry implements Tr
    * @return the value associated with the supplied {@code key}; may
    * be {@code null}
    *
-   * @exception IllegalStateException if no transaction is active
+   * @exception IllegalStateException if no transaction is active or
+   * if a {@code null} {@code delegate} was supplied at {@linkplain
+   * #DelegatingTransactionSynchronizationRegistry(TransactionSynchronizationRegistry)
+   * construction time}
    *
    * @exception NullPointerException if the parameter {@code key} is
    * {@code null}
    */
   @Override
   public Object getResource(final Object key) {
+    if (this.delegate == null) {
+      throw new IllegalStateException("delegate == null");
+    }
     return this.delegate.getResource(key);
   }
 
@@ -188,7 +214,10 @@ public abstract class DelegatingTransactionSynchronizationRegistry implements Tr
    * must not be {@code null}
    *
    * @exception IllegalStateException if no transaction is active or
-   * two-phase commit processing has started
+   * two-phase commit processing has started or if a {@code null}
+   * {@code delegate} was supplied at {@linkplain
+   * #DelegatingTransactionSynchronizationRegistry(TransactionSynchronizationRegistry)
+   * construction time}
    *
    * @see Synchronization
    *
@@ -198,6 +227,9 @@ public abstract class DelegatingTransactionSynchronizationRegistry implements Tr
    */
   @Override
   public void registerInterposedSynchronization(final Synchronization synchronization) {
+    if (this.delegate == null) {
+      throw new IllegalStateException("delegate == null");
+    }
     this.delegate.registerInterposedSynchronization(synchronization);
   }
 
@@ -214,12 +246,20 @@ public abstract class DelegatingTransactionSynchronizationRegistry implements Tr
    * at the time this method is called; will be equal the value of one
    * of the constants defined in the {@link Status} class
    *
+   * @exception IllegalStateException if a {@code null} {@code
+   * delegate} was supplied at {@linkplain
+   * #DelegatingTransactionSynchronizationRegistry(TransactionSynchronizationRegistry)
+   * construction time}
+   *
    * @see TransactionManager#getStatus()
    *
    * @see Status
    */
   @Override
   public int getTransactionStatus() {
+    if (this.delegate == null) {
+      throw new IllegalStateException("delegate == null");
+    }
     return this.delegate.getTransactionStatus();
   }
 
@@ -227,10 +267,16 @@ public abstract class DelegatingTransactionSynchronizationRegistry implements Tr
    * Sets the {@code rollbackOnly} status of the transaction bound to
    * the current thread at the time this method is called.
    *
-   * @exception IllegalStateException if no transaction is active
+   * @exception IllegalStateException if no transaction is active or
+   * if a {@code null} {@code delegate} was supplied at {@linkplain
+   * #DelegatingTransactionSynchronizationRegistry(TransactionSynchronizationRegistry)
+   * construction time}
    */
   @Override
   public void setRollbackOnly() {
+    if (this.delegate == null) {
+      throw new IllegalStateException("delegate == null");
+    }
     this.delegate.setRollbackOnly();
   }
 
@@ -240,10 +286,16 @@ public abstract class DelegatingTransactionSynchronizationRegistry implements Tr
    *
    * @return the {@code rollbackOnly} status
    *
-   * @exception IllegalStateException if no transaction is active
+   * @exception IllegalStateException if no transaction is active or
+   * if a {@code null} {@code delegate} was supplied at {@linkplain
+   * #DelegatingTransactionSynchronizationRegistry(TransactionSynchronizationRegistry)
+   * construction time}
    */
   @Override
   public boolean getRollbackOnly() {
+    if (this.delegate == null) {
+      throw new IllegalStateException("delegate == null");
+    }
     return this.delegate.getRollbackOnly();
   }
 

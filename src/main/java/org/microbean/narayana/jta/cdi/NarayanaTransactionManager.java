@@ -48,7 +48,7 @@ import com.arjuna.ats.jta.common.JTAEnvironmentBean;
  * @see com.arjuna.ats.jta.common.JTAEnvironmentBean#getTransactionManager()
  */
 @ApplicationScoped
-public class NarayanaTransactionManager extends DelegatingTransactionManager {
+class NarayanaTransactionManager extends DelegatingTransactionManager {
 
   private final Event<Transaction> transactionScopeInitializedBroadcaster;
 
@@ -58,27 +58,33 @@ public class NarayanaTransactionManager extends DelegatingTransactionManager {
    * Creates a new, <strong>nonfunctional</strong> {@link
    * NarayanaTransactionManager}.
    *
-   * <p>This constructor exists only to conform with section 3.11 of
+   * <p>This constructor exists only to conform with section 3.15 of
    * the CDI specification.</p>
    *
    * @deprecated This constructor exists only to conform with section
-   * 3.11 of the CDI specification; please use the {@link
+   * 3.15 of the CDI specification; please use the {@link
    * #NarayanaTransactionManager(JTAEnvironmentBean, Event, Event)}
    * constructor instead.
+   *
+   * @see #NarayanaTransactionManager(JTAEnvironmentBean, Event,
+   * Event)
+   *
+   * @see <a
+   * href="http://docs.jboss.org/cdi/spec/1.2/cdi-spec.html#unproxyable">Section
+   * 3.15 of the CDI 2.0 specification</a>
    */
   @Deprecated
-  protected NarayanaTransactionManager() {
-    super(null);
-    this.transactionScopeInitializedBroadcaster = null;
-    this.transactionScopeDestroyedBroadcaster = null;
+  NarayanaTransactionManager() {
+    this(null, null, null);
   }
   
   /**
    * Creates a new {@link NarayanaTransactionManager}.
    *
    * @param jtaEnvironmentBean a {@link JTAEnvironmentBean} used to
-   * acquire this {@link NarayanaTransactionManager}'s delegate; must
-   * not be {@code null}
+   * acquire this {@link NarayanaTransactionManager}'s delegate; may
+   * be {@code null} but then a {@link SystemException} will be thrown
+   * by every method in this class when invoked
    *
    * @param transactionScopeInitializedBroadcaster an {@link Event}
    * capable of {@linkplain Event#fire(Object) firing} {@link
@@ -88,9 +94,6 @@ public class NarayanaTransactionManager extends DelegatingTransactionManager {
    * capable of {@linkplain Event#fire(Object) firing} {@link Object}
    * instances; may be {@code null}
    *
-   * @exception NullPointerException if {@code jtaEnvironmentBean} is
-   * {@code null}
-   *
    * @see #begin()
    *
    * @see #commit()
@@ -98,12 +101,10 @@ public class NarayanaTransactionManager extends DelegatingTransactionManager {
    * @see #rollback()
    */
   @Inject
-  public NarayanaTransactionManager(final JTAEnvironmentBean jtaEnvironmentBean,
-                                    @Initialized(TransactionScoped.class)
-                                    final Event<Transaction> transactionScopeInitializedBroadcaster,
-                                    @Destroyed(TransactionScoped.class)
-                                    final Event<Object> transactionScopeDestroyedBroadcaster) {
-    super(jtaEnvironmentBean.getTransactionManager());
+  private NarayanaTransactionManager(final JTAEnvironmentBean jtaEnvironmentBean,
+                                     @Initialized(TransactionScoped.class) final Event<Transaction> transactionScopeInitializedBroadcaster,
+                                     @Destroyed(TransactionScoped.class) final Event<Object> transactionScopeDestroyedBroadcaster) {
+    super(jtaEnvironmentBean == null ? null : jtaEnvironmentBean.getTransactionManager());
     this.transactionScopeInitializedBroadcaster = transactionScopeInitializedBroadcaster;
     this.transactionScopeDestroyedBroadcaster = transactionScopeDestroyedBroadcaster;
   }

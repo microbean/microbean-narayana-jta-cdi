@@ -20,11 +20,12 @@ import java.util.Objects;
 
 import javax.enterprise.context.ApplicationScoped;
 
+import javax.inject.Inject;
+
 import javax.transaction.Synchronization;
 import javax.transaction.TransactionSynchronizationRegistry;
 
-import com.arjuna.ats.jta.common.jtaPropertyManager;
-import com.arjuna.ats.jta.common.JTAEnvironmentBean; // for javadoc only
+import com.arjuna.ats.jta.common.JTAEnvironmentBean;
 
 /**
  * A {@link DelegatingTransactionSynchronizationRegistry} in
@@ -39,15 +40,39 @@ import com.arjuna.ats.jta.common.JTAEnvironmentBean; // for javadoc only
  * @see JTAEnvironmentBean#getTransactionSynchronizationRegistry()
  */
 @ApplicationScoped
-public class NarayanaTransactionSynchronizationRegistry extends DelegatingTransactionSynchronizationRegistry {
+class NarayanaTransactionSynchronizationRegistry extends DelegatingTransactionSynchronizationRegistry {
 
+  /**
+   * Creates a new, <strong>nonfunctional</strong> {@link
+   * NarayanaTransactionSynchronizationRegistry}.
+   *
+   * <p>This constructor exists only to conform with section 3.15 of
+   * the CDI specification.</p>
+   *
+   * @deprecated This constructor exists only to conform with section
+   * 3.15 of the CDI specification; please use the {@link
+   * #NarayanaTransactionSynchronizationRegistry(JTAEnvironmentBean)}
+   * constructor instead.
+   *
+   * @see #NarayanaTransactionSynchronizationRegistry(JTAEnvironmentBean)
+   *
+   * @see <a
+   * href="http://docs.jboss.org/cdi/spec/1.2/cdi-spec.html#unproxyable">Section
+   * 3.15 of the CDI 2.0 specification</a>
+   */
+  @Deprecated
+  NarayanaTransactionSynchronizationRegistry() {
+    this(null);
+  }
+  
   /**
    * Creates a new {@link NarayanaTransactionSynchronizationRegistry}.
    *
    * @see JTAEnvironmentBean#getTransactionSynchronizationRegistry()
    */
-  public NarayanaTransactionSynchronizationRegistry() {
-    super(jtaPropertyManager.getJTAEnvironmentBean().getTransactionSynchronizationRegistry());
+  @Inject
+  private NarayanaTransactionSynchronizationRegistry(final JTAEnvironmentBean jtaEnvironmentBean) {
+    super(jtaEnvironmentBean == null ? null : jtaEnvironmentBean.getTransactionSynchronizationRegistry());
   }
   
 }
